@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'firestore_service.dart';
 
 class BookDetailsPage extends StatefulWidget {
   final Map bookData;
@@ -11,6 +12,38 @@ class BookDetailsPage extends StatefulWidget {
 
 class _BookDetailsPageState extends State<BookDetailsPage> {
   int userRating = 0;
+  late String bookId;
+
+  @override
+  void initState() {
+    super.initState();
+    bookId = widget.bookData['id'] ?? '';
+    loadUserRating();
+  }
+
+  Future<void> loadUserRating() async {
+    try {
+      final rating = await FirestoreService.getBookRating(bookId);
+      if (rating != null) {
+        setState(() {
+          userRating = rating;
+        });
+      }
+    } catch (e) {
+      print('Error loading rating: $e');
+    }
+  }
+
+  Future<void> saveUserRating() async {
+    try {
+      await FirestoreService.saveBookRating(bookId, userRating);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('✅ Your Rating Saved!')),
+      );
+    } catch (e) {
+      print('Error saving rating: $e');
+    }
+  }
 
   Widget buildStar(int starNumber) {
     return IconButton(
@@ -82,7 +115,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
             ),
             Divider(height: 30, thickness: 1),
 
-            /// Description
+            // 📖 Description
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -94,7 +127,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
             Text(description, style: TextStyle(fontSize: 16)),
             Divider(height: 30, thickness: 1),
 
-            /// User Rating Stars
+            // ⭐ User Rating
             Text(
               'Your Rating',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -102,6 +135,18 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) => buildStar(index + 1)),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: saveUserRating,
+              child: Text('Save Rating', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
             ),
           ],
         ),
