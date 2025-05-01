@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'firestore_service.dart';
+import 'book_details_page.dart';
 
 class MyBooksPage extends StatefulWidget {
   const MyBooksPage({Key? key}) : super(key: key);
@@ -14,6 +15,8 @@ class _MyBooksPageState extends State<MyBooksPage>
   List<Map<String, dynamic>> currentlyReading = [];
   List<Map<String, dynamic>> wantToRead = [];
   List<Map<String, dynamic>> finishedReading = [];
+
+  bool isSortedByRating = false;
 
   @override
   void initState() {
@@ -33,17 +36,98 @@ class _MyBooksPageState extends State<MyBooksPage>
     setState(() {});
   }
 
-  Widget buildList(List<Map<String, dynamic>> books) {
-    return books.isEmpty
-        ? Center(child: Text('No books here.'))
-        : ListView.builder(
-          itemCount: books.length,
-          itemBuilder:
-              (context, index) => ListTile(
-                title: Text(books[index]['title'] ?? 'No Title'),
-                subtitle: Text(books[index]['authors'] ?? ''),
-              ),
+  void sortFinishedBooks() {
+    setState(() {
+      finishedReading.sort((a, b) {
+        int ratingA = a['userRating'] ?? 0;
+        int ratingB = b['userRating'] ?? 0;
+        return isSortedByRating
+            ? ratingA.compareTo(ratingB)
+            : ratingB.compareTo(ratingA);
+      });
+      isSortedByRating = !isSortedByRating;
+    });
+  }
+
+  Widget buildBookList(
+    List<Map<String, dynamic>> books, {
+    bool showRating = false,
+  }) {
+    if (books.isEmpty) {
+      return Center(
+        child: Text(
+          'No books here!',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+        ),
+      );
+    }
+    return ListView.builder(
+      itemCount: books.length,
+      itemBuilder: (context, index) {
+        final book = books[index];
+        return Card(
+          margin: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading:
+                book['thumbnail'] != null
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        book['thumbnail'],
+                        width: 50,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                    : Container(width: 50, height: 50, color: Colors.grey),
+            title: Text(
+              book['title'] ?? 'No Title',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(book['authors'] ?? ''),
+                if (showRating && book['userRating'] != null)
+                  Row(
+                    children: List.generate(
+                      book['userRating'],
+                      (index) =>
+                          Icon(Icons.star, size: 16, color: Colors.amber),
+                    ),
+                  ),
+              ],
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => BookDetailsPage(
+                        bookData: {
+                          'volumeInfo': {
+                            'title': book['title'],
+                            'authors': book['authors'].split(', '),
+                            'imageLinks': {'thumbnail': book['thumbnail']},
+                            'categories': [book['categories']],
+                            'averageRating': book['averageRating'],
+                            'ratingsCount': book['ratingsCount'],
+                            'previewLink': book['previewLink'],
+                            'description': 'No description available.',
+                          },
+                          'id': book['previewLink'], // temporary id
+                        },
+                      ),
+                ),
+              );
+            },
+          ),
         );
+      },
+    );
   }
 
   @override
@@ -55,6 +139,7 @@ class _MyBooksPageState extends State<MyBooksPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text('My Books'),
         backgroundColor: Colors.deepPurple,
@@ -66,13 +151,24 @@ class _MyBooksPageState extends State<MyBooksPage>
             Tab(text: 'Finished Reading'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.sort),
+            tooltip: 'Sort by Rating',
+            onPressed: () {
+              if (_tabController.index == 2) {
+                sortFinishedBooks();
+              }
+            },
+          ),
+        ],
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          buildList(currentlyReading),
-          buildList(wantToRead),
-          buildList(finishedReading),
+          buildBookList(currentlyReading),
+          buildBookList(wantToRead),
+          buildBookList(finishedReading, showRating: true),
         ],
       ),
     );
