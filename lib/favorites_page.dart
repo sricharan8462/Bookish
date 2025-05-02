@@ -1,6 +1,6 @@
-// Same imports
 import 'package:flutter/material.dart';
 import 'firestore_service.dart';
+import 'book_details_page.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({Key? key}) : super(key: key);
@@ -42,14 +42,34 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   return ListTile(
                     leading:
                         book['thumbnail'] != null
-                            ? Image.network(book['thumbnail'], width: 50)
-                            : Container(
-                              width: 50,
-                              height: 50,
-                              color: Colors.grey,
-                            ),
+                            ? Image.network(book['thumbnail'])
+                            : null,
                     title: Text(book['title'] ?? 'No Title'),
                     subtitle: Text(book['authors'] ?? ''),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => BookDetailsPage(
+                                bookData: {
+                                  'volumeInfo': {
+                                    'title': book['title'],
+                                    'authors': book['authors'].split(', '),
+                                    'imageLinks': {
+                                      'thumbnail': book['thumbnail'],
+                                    },
+                                    'categories': [book['categories']],
+                                    'averageRating': book['averageRating'],
+                                    'ratingsCount': book['ratingsCount'],
+                                    'previewLink': book['previewLink'],
+                                    'description': 'No description available.',
+                                  },
+                                },
+                              ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
