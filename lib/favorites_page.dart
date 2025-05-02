@@ -1,3 +1,4 @@
+// Same imports
 import 'package:flutter/material.dart';
 import 'firestore_service.dart';
 
@@ -31,18 +32,27 @@ class _FavoritesPageState extends State<FavoritesPage> {
         title: Text('My Favorites'),
         backgroundColor: Colors.deepPurple,
       ),
-      body: favoriteBooks.isEmpty
-          ? Center(child: Text('No favorites yet!'))
-          : ListView.builder(
-              itemCount: favoriteBooks.length,
-              itemBuilder: (context, index) {
-                final book = favoriteBooks[index];
-                return ListTile(
-                  title: Text(book['title'] ?? 'No Title'),
-                  subtitle: Text(book['authors'] ?? ''),
-                );
-              },
-            ),
+      body:
+          favoriteBooks.isEmpty
+              ? Center(child: Text('No favorites yet!'))
+              : ListView.builder(
+                itemCount: favoriteBooks.length,
+                itemBuilder: (context, index) {
+                  final book = favoriteBooks[index];
+                  return ListTile(
+                    leading:
+                        book['thumbnail'] != null
+                            ? Image.network(book['thumbnail'], width: 50)
+                            : Container(
+                              width: 50,
+                              height: 50,
+                              color: Colors.grey,
+                            ),
+                    title: Text(book['title'] ?? 'No Title'),
+                    subtitle: Text(book['authors'] ?? ''),
+                  );
+                },
+              ),
     );
   }
 }
