@@ -1,151 +1,77 @@
 import 'package:flutter/material.dart';
-import 'firestore_service.dart';
-import 'book_details_page.dart';
 
-class MyBooksPage extends StatefulWidget {
-  const MyBooksPage({Key? key}) : super(key: key);
+class BookDetailsPage extends StatelessWidget {
+  final Map bookData;
 
-  @override
-  State<MyBooksPage> createState() => _MyBooksPageState();
-}
-
-class _MyBooksPageState extends State<MyBooksPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  List<Map<String, dynamic>> currentlyReading = [];
-  List<Map<String, dynamic>> wantToRead = [];
-  List<Map<String, dynamic>> finishedReading = [];
-
-  bool isSortedByRating = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    fetchMyBooks();
-  }
-
-  Future<void> fetchMyBooks() async {
-    currentlyReading = await FirestoreService.getBooksFromList(
-      'currentlyReading',
-    );
-    wantToRead = await FirestoreService.getBooksFromList('wantToRead');
-    finishedReading = await FirestoreService.getBooksFromList(
-      'finishedReading',
-    );
-    setState(() {});
-  }
-
-  void sortFinishedBooks() {
-    setState(() {
-      finishedReading.sort((a, b) {
-        int ratingA = a['userRating'] ?? 0;
-        int ratingB = b['userRating'] ?? 0;
-        return isSortedByRating
-            ? ratingA.compareTo(ratingB)
-            : ratingB.compareTo(ratingA);
-      });
-      isSortedByRating = !isSortedByRating;
-    });
-  }
-
-  Widget buildList(
-    List<Map<String, dynamic>> books, {
-    bool showRating = false,
-  }) {
-    if (books.isEmpty) {
-      return Center(child: Text('No books here.'));
-    }
-
-    return ListView.builder(
-      itemCount: books.length,
-      itemBuilder: (context, index) {
-        final book = books[index];
-        return ListTile(
-          leading:
-              book['thumbnail'] != null
-                  ? Image.network(
-                    book['thumbnail'],
-                    width: 50,
-                    fit: BoxFit.cover,
-                  )
-                  : Container(width: 50, height: 50, color: Colors.grey),
-          title: Text(book['title'] ?? 'No Title'),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(book['authors'] ?? ''),
-              if (showRating && book['userRating'] != null)
-                Text('Your Rating: ${book['userRating']} ★'),
-            ],
-          ),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => BookDetailsPage(
-                      bookData: {
-                        'volumeInfo': {
-                          'title': book['title'],
-                          'authors': book['authors'].split(', '),
-                          'imageLinks': {'thumbnail': book['thumbnail']},
-                          'categories': [book['categories']],
-                          'averageRating': book['averageRating'],
-                          'ratingsCount': book['ratingsCount'],
-                          'previewLink': book['previewLink'],
-                          'description': 'No description available.',
-                        },
-                        'id': book['previewLink'], // used as fallback ID
-                      },
-                    ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  const BookDetailsPage({Key? key, required this.bookData}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final volumeInfo = bookData['volumeInfo'];
+    final title = volumeInfo['title'] ?? 'No Title';
+    final authors =
+        volumeInfo['authors'] != null
+            ? (volumeInfo['authors'] as List).join(', ')
+            : 'Unknown Author';
+    final description =
+        volumeInfo['description'] ?? 'No description available.';
+    final thumbnail =
+        volumeInfo['imageLinks'] != null
+            ? volumeInfo['imageLinks']['thumbnail']
+            : null;
+    final categories =
+        volumeInfo['categories'] != null
+            ? (volumeInfo['categories'] as List).join(', ')
+            : 'No Category';
+    final averageRating =
+        volumeInfo['averageRating']?.toString() ?? 'No rating';
+    final ratingsCount = volumeInfo['ratingsCount']?.toString() ?? '0';
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Books'),
+        title: Text('Book Details'),
         backgroundColor: Colors.deepPurple,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Currently Reading'),
-            Tab(text: 'Want to Read'),
-            Tab(text: 'Finished Reading'),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (thumbnail != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(thumbnail, height: 220),
+              ),
+            SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'by $authors',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontStyle: FontStyle.italic),
+            ),
+            SizedBox(height: 10),
+            Text('Genre: $categories', style: TextStyle(fontSize: 16)),
+            Text(
+              'Avg Rating: $averageRating ★ ($ratingsCount ratings)',
+              style: TextStyle(fontSize: 16),
+            ),
+            Divider(height: 30, thickness: 1),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Description',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(description, style: TextStyle(fontSize: 16)),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.sort),
-            tooltip: 'Sort by Rating',
-            onPressed: () {
-              if (_tabController.index == 2) {
-                sortFinishedBooks();
-              }
-            },
-          ),
-        ],
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          buildList(currentlyReading),
-          buildList(wantToRead),
-          buildList(finishedReading, showRating: true),
-        ],
       ),
     );
   }

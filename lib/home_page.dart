@@ -7,7 +7,7 @@ import 'book_details_page.dart';
 import 'favorites_page.dart';
 import 'my_books_page.dart';
 import 'login_page.dart';
-//import 'recommendation_page.dart';
+import 'recommendation_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
